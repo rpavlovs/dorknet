@@ -2,13 +2,14 @@
 import type { NextApiRequest, NextApiResponse } from 'next'
 
 type Data = {
-  name: string
+  ipfsHash: string
 }
 
 export default function handler(
   req: NextApiRequest,
   res: NextApiResponse<Data>
 ) {
+  const { publicationId, readerAddress, readerSignature } = req.body
   // get publicationId, signature and address from req
 
   // verify signature and address
@@ -23,5 +24,5 @@ export default function handler(
 
   // otherwise return 403
 
-  res.status(200).json({ name: 'John Doe' })
+  res.status(200).json({ ipfsHash: 'John Doe' })
 }

@@ -21,6 +21,14 @@ const Publication = () => {
 
   const { disconnect } = useDisconnect()
 
+  fetch('/api/getPaper', {
+    body: {
+      publicationId: 'asdf',
+      readerAddress: 'asdfas',
+      readerSignature: '',
+    },
+  })
+
   return (
     <div>
       {account?.address ? (
