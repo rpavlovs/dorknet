@@ -1,62 +1,70 @@
 import '../styles/globals.css'
 import type { AppProps } from 'next/app'
+import { getDefaultProvider, providers } from 'ethers'
 import {
-  WagmiConfig,
-  createClient,
-  configureChains,
+  Provider as EthersProvider,
+  chain,
   defaultChains,
+  createClient,
+  Chain,
 } from 'wagmi'
-
-import { alchemyProvider } from 'wagmi/providers/alchemy'
-import { publicProvider } from 'wagmi/providers/public'
-
-import { CoinbaseWalletConnector } from 'wagmi/connectors/coinbaseWallet'
 import { InjectedConnector } from 'wagmi/connectors/injected'
-import { MetaMaskConnector } from 'wagmi/connectors/metaMask'
 import { WalletConnectConnector } from 'wagmi/connectors/walletConnect'
+import { CoinbaseWalletConnector } from 'wagmi/connectors/coinbaseWallet'
+
+import { ChakraProvider } from '@chakra-ui/react'
+import { extendTheme } from '@chakra-ui/react'
+
+const alchemyId = process.env.ALCHEMY_ID
 
 function MyApp({ Component, pageProps }: AppProps) {
-  const alchemyId = process.env.ALCHEMY_ID
-
-  // Configure chains & providers with the Alchemy provider.
-  // Two popular providers are Alchemy (alchemy.com) and Infura (infura.io)
-  const { chains, provider, webSocketProvider } = configureChains(
-    defaultChains,
-    [alchemyProvider({ alchemyId }), publicProvider()]
-  )
+  const chains = defaultChains
 
   const client = createClient({
     autoConnect: true,
-    connectors: [
-      new MetaMaskConnector({ chains }),
-      new CoinbaseWalletConnector({
-        chains,
-        options: {
-          appName: 'wagmi',
-        },
-      }),
-      new WalletConnectConnector({
-        chains,
-        options: {
-          qrcode: true,
-        },
-      }),
-      new InjectedConnector({
-        chains,
-        options: {
-          name: 'Injected',
-          shimDisconnect: true,
-        },
-      }),
-    ],
-    provider,
-    webSocketProvider,
+    connectors: ({ chainId }) => {
+      const rpcUrl =
+        chains.find(x => x.id === chainId)?.rpcUrls?.[0] ??
+        chain.mainnet.rpcUrls[0]
+
+      return [
+        new InjectedConnector({
+          chains,
+        }),
+        new WalletConnectConnector({
+          options: {
+            qrcode: true,
+            bridge: 'https://bridge.walletconnect.org',
+            rpc: {
+              // TODO: Support more chains
+              '1': rpcUrl,
+            },
+          },
+        }),
+        new CoinbaseWalletConnector({
+          chains,
+          options: {
+            chainId,
+            appName: '0xfrens.xyz',
+          },
+        }),
+      ]
+    },
+    provider: ({ chainId }) => {
+      if (!chainId) return getDefaultProvider()
+      const chain = chains.find(tempChain => tempChain.id === chainId) as Chain
+      const providerUrl = chain.rpcUrls.default
+
+      return new providers.JsonRpcProvider(providerUrl, chainId)
+    },
   })
 
   return (
-    <WagmiConfig client={client}>
-      <Component {...pageProps} />
-    </WagmiConfig>
+    <EthersProvider client={client}>
+      <ChakraProvider theme={extendTheme({})}>
+        <Component {...pageProps} />
+      </ChakraProvider>
+    </EthersProvider>
   )
 }
 
